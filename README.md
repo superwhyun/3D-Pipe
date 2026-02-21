@@ -28,6 +28,7 @@
     - RunPod Console에서 **Serverless -> Endpoints**로 이동합니다.
     - **New Endpoint**를 생성하고 위에서 푸시한 이미지를 사용합니다.
     - 생성된 **Endpoint ID**와 **API Key**를 메모해둡니다.
+    - Endpoint 타입은 **Queue based**를 사용합니다.
 
 ### 2. 프론트엔드 설정 및 실행
 
@@ -37,9 +38,13 @@
     npm install
     ```
 2.  **API 연결**:
-    - `ui/src/app/page.tsx` 파일을 엽니다.
-    - `RUNPOD_URL`의 `YOUR_ENDPOINT_ID`와 `RUNPOD_API_KEY`를 본인의 정보로 수정합니다.
-    - 기본값은 RunPod 모드입니다. 로컬 백엔드를 쓰려면 `NEXT_PUBLIC_API_MODE=local`을 설정해야 합니다.
+    - 앱 실행 후 상단 **Backend Settings**에서 설정합니다.
+    - `Backend Type`:
+      - `RunPod Runsync API` (운영/서버리스)
+      - `Remote Convert API (POST /convert)` (로컬/원격 FastAPI)
+    - RunPod 사용 시 URL 예시:
+      - `https://api.runpod.ai/v2/<ENDPOINT_ID>/runsync`
+    - 같은 화면에서 API Key 입력 후 저장하면 브라우저에 저장되어 재실행 시 자동 복원됩니다.
 3.  **실행**:
     ```bash
     npm run dev
@@ -69,11 +74,17 @@ npm run dev
 
 ### 3. 접속 및 테스트
 - 브라우저에서 `http://localhost:3000`에 접속합니다.
-- 기본값은 RunPod 모드이므로, 로컬 백엔드를 쓸 때는 `ui/.env.local`에 아래 값을 넣어야 합니다.
-  ```bash
-  NEXT_PUBLIC_API_MODE=local
-  ```
-- **포트 확인**: 프론트엔드는 도커 백엔드 `http://localhost:9001/convert`와 통신합니다.
+- 상단 **Backend Settings**를 열고:
+  - `Backend Type`을 `Remote Convert API (POST /convert)`로 선택
+  - `Remote API URL`을 `http://localhost:9001/convert`로 입력
+  - `Check`로 연결 확인 후 변환 테스트
+- 프론트엔드는 도커 백엔드 `http://localhost:9001/convert`와 통신합니다.
+
+### 4. 문제 발생 시 로그 확인 (로컬 도커)
+```bash
+docker logs 3dpipe-backend --tail 300
+```
+- Blender/변환 관련 오류는 이 로그에서 먼저 확인합니다.
 
 ---
 
@@ -124,6 +135,20 @@ python local_server.py
    blender --background --python converter.py -- input.glb output.fbx
    ```
 
+### 3. RunPod API 연동 테스트 스크립트
+`runpod-3d-conv-test.sh`는 실제 GLB 파일을 base64로 인코딩해 `runsync`로 전송합니다.
+
+```bash
+export RUNPOD_API_KEY='<YOUR_RUNPOD_API_KEY>'
+export RUNPOD_ENDPOINT_ID='<YOUR_ENDPOINT_ID>'   # 생략 시 기본값 사용
+
+./runpod-3d-conv-test.sh ./test.glb
+```
+
+주의:
+- API Key는 스크립트에 하드코딩하지 말고 환경변수로만 사용하세요.
+- 키가 노출되면 즉시 폐기(rotate)하세요.
+
 ## 주요 기능
 - **Drag & Drop**: 쉽고 직분적인 파일 업로드.
 - **Sequential Queue**: 여러 파일을 올려도 과부하 없이 하나씩 순차적으로 변환.
@@ -134,3 +159,18 @@ python local_server.py
 - GLB(PBR) → FBX 변환 시 셰이딩 모델 차이로 인해 반짝임/질감이 달라질 수 있습니다.
 - 최근 변환 스크립트는 텍스처를 내보내기 전에 실제 이미지 파일로 정규화한 뒤 FBX에 포함하여, 텍스처 누락 가능성을 낮추도록 구성되어 있습니다.
 - Blender에서 FBX가 회색으로 보일 경우, `Material Preview` 또는 `Rendered` 모드와 FBX 임포트 옵션의 `Image Search`를 확인하세요.
+
+## RunPod Known Issue (대용량 파일)
+현재 구조에서 RunPod `runsync` 호출 시, **큰 GLB를 JSON base64로 직접 전송**하면 요청 단계에서 실패할 수 있습니다.
+
+- 증상:
+  - 작은 파일은 성공, 큰 파일(예: 수십 MB 이상)은 400 실패
+  - 컨테이너 내부 변환 이전 단계에서 거절되는 패턴
+- 원인:
+  - base64 전송 시 크기 팽창(약 33%) + 게이트웨이/요청 본문 제한 가능성
+
+### TODO
+- [ ] 프론트엔드에서 RunPod direct 업로드 시 파일 크기 제한 및 사용자 안내 추가
+- [ ] `file_url` 입력 방식 지원 (S3/R2 pre-signed URL 기반)
+- [ ] `handler.py`에서 `file_url` 다운로드 경로 지원
+- [ ] 대용량 파일은 `run + status polling` 경로도 검토
