@@ -227,7 +227,7 @@ export default function Home() {
   return (
     <main className="container">
       <header>
-        <h1>3D Pipe</h1>
+        <h1>3D PiPe</h1>
         <p className="subtitle">GLB to FBX Serverless Converter</p>
         <div className="backend-toolbar">
           <div className={`connection-pill connection-${connectionStatus}`}>
