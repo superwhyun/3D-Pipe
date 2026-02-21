@@ -1,0 +1,11 @@
+services:
+  backend:
+    platform: linux/amd64
+    build:
+      context: ./backend
+    container_name: 3dpipe-backend
+    ports:
+      - "9001:8000"
+    volumes:
+      - ./backend:/app
+    command: ["python", "local_server.py"]

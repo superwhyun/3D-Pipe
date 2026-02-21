@@ -1,0 +1,39 @@
+# macOS
+.DS_Store
+
+# Python / backend
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Node / frontend
+ui/node_modules/
+ui/.next/
+ui/out/
+ui/.turbo/
+
+# Build artifacts / logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment / secrets
+.env
+.env.*
+ui/.env
+ui/.env.*
+backend/.env
+backend/.env.*
+
+# Local test artifacts
+*.fbx
+*.blend
+*.tmp
+tmp/
